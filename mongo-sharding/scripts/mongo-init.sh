@@ -1,10 +1,10 @@
 #!/bin/bash
 
 ###
-# Инициализируем бд
+# Вставляем тестовые данные в базу
 ###
 
-docker compose exec -T mongodb1 mongosh <<EOF
+docker compose exec -T mongos_router mongosh --port 27020 <<'EOF'
 use somedb
 for(var i = 0; i < 1000; i++) db.helloDoc.insertOne({age:i, name:"ly"+i})
 EOF
