@@ -160,13 +160,27 @@ services:
       - ./scripts:/scripts:ro
     entrypoint: ["/bin/bash", "/scripts/init-mongos.sh"]
 
+  init-data:
+    image: mongo:latest
+    container_name: init-data
+    restart: "no"
+    depends_on:
+      init-mongos:
+        condition: service_completed_successfully
+    networks:
+      - app-network
+    volumes:
+      - ./scripts:/scripts:ro
+    entrypoint: ["/bin/bash", "/scripts/mongo-init.sh"]
+
   pymongo_api:
     container_name: pymongo_api
     build: 
       context: api_app
       dockerfile: Dockerfile
     depends_on:
-      - init-mongos
+      init-data:
+        condition: service_completed_successfully
     networks:
       - app-network
     ports:
