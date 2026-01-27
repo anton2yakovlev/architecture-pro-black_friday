@@ -1,18 +1,32 @@
 #!/bin/bash
 set -e
 
-echo ">>> Ожидание запуска shard2..."
-until mongosh --host shard2 --port 27019 --eval "db.adminCommand('ping')" > /dev/null 2>&1; do
-  echo ">>> Ожидание shard2..."
+echo ">>> Ожидание запуска shard2 реплик..."
+until mongosh --host shard2_1 --port 27018 --eval "db.adminCommand('ping')" > /dev/null 2>&1; do
+  echo ">>> Ожидание shard2_1..."
   sleep 2
 done
 
-echo ">>> Инициализация shard2 replica set (идемпотентно)"
-mongosh --host shard2 --port 27019 <<'EOF'
+until mongosh --host shard2_2 --port 27018 --eval "db.adminCommand('ping')" > /dev/null 2>&1; do
+  echo ">>> Ожидание shard2_2..."
+  sleep 2
+done
+
+until mongosh --host shard2_3 --port 27018 --eval "db.adminCommand('ping')" > /dev/null 2>&1; do
+  echo ">>> Ожидание shard2_3..."
+  sleep 2
+done
+
+echo ">>> Инициализация shard2 replica set с тремя репликами"
+mongosh --host shard2_1 --port 27018 <<'EOF'
 try {
   rs.initiate({
     _id: "shard2",
-    members: [{ _id: 0, host: "shard2:27019" }]
+    members: [
+      { _id: 0, host: "shard2_1:27018" },
+      { _id: 1, host: "shard2_2:27018" },
+      { _id: 2, host: "shard2_3:27018" }
+    ]
   })
 } catch(e) {
   if (e.message.includes("already initialized") || e.message.includes("already a member")) {
