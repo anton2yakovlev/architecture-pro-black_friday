@@ -10,7 +10,14 @@ docker compose up -d --build
 
 ## Проверка
 
+По результатам проверки время запроса эндпоинта count снизилось 46 мс -> 9 мс
+
 Локально: http://localhost:8080
 
-![Общая информация о кластере](../tasks/task_3/get_root.png)
-![Количество записей после запуска](../tasks/task_3/get_count.png)
+Первый запрос:
+
+![Первый запрос](../tasks/task_4/first_request.png)
+
+Второй запрос:
+
+![Второй запрос](../tasks/task_4/second_request.png)
