@@ -268,20 +268,6 @@ services:
       - ./scripts:/scripts:ro
     entrypoint: ["/bin/bash", "/scripts/mongo-init.sh"]
 
-  redis:
-    image: redis:latest
-    container_name: sharding-repl-cache-redis
-    restart: always
-    networks:
-      app-network:
-        ipv4_address: 173.17.0.2
-    ports:
-      - "6379:6379"
-    healthcheck:
-      test: [ "CMD", "redis-cli", "ping" ]
-      interval: 5s
-      start_period: 10s
-
   pymongo_api:
     container_name: pymongo_api
     build: 
@@ -304,8 +290,6 @@ services:
         condition: service_started
       mongos_router:
         condition: service_started
-      redis:
-        condition: service_healthy
       init-data:
         condition: service_completed_successfully
     networks:
@@ -315,7 +299,6 @@ services:
     environment:
       MONGODB_URL: "mongodb://mongos_router:27020"
       MONGODB_DATABASE_NAME: "somedb"
-      REDIS_URL: "redis://sharding-repl-cache-redis:6379"
 
 
 networks:
