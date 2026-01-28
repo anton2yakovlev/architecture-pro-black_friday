@@ -29,7 +29,8 @@ app.add_middleware(
 
 DATABASE_URL = os.environ["MONGODB_URL"]
 DATABASE_NAME = os.environ["MONGODB_DATABASE_NAME"]
-REDIS_URL = os.getenv("REDIS_URL", None)
+#REDIS_URL = os.getenv("REDIS_URL", None)
+REDIS_URL = "redis://sharding-repl-cache-redis:6379"
 
 
 def nocache(*args, **kwargs):
