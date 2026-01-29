@@ -12,5 +12,9 @@ docker compose up -d --build
 
 Локально: http://localhost:8080
 
-![Общая информация о кластере](../tasks/task_3/get_root.png)
-![Количество записей после запуска](../tasks/task_3/get_count.png)
+Проверка работы кэша:
+```shell
+sh scripts/test_redis.sh
+```
+
+![При повторном обращении данные берутся из кэша](../tasks/task_4/cache_script.png)
