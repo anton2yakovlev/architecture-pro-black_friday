@@ -290,6 +290,8 @@ services:
         condition: service_started
       mongos_router:
         condition: service_started
+      redis:
+        condition: service_started
       init-data:
         condition: service_completed_successfully
     networks:
@@ -299,6 +301,7 @@ services:
     environment:
       MONGODB_URL: "mongodb://mongos_router:27020"
       MONGODB_DATABASE_NAME: "somedb"
+      REDIS_URL: "redis://redis:6379"
 
   redis:
     image: "redis:latest"

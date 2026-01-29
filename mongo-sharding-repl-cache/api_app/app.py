@@ -29,8 +29,7 @@ app.add_middleware(
 
 DATABASE_URL = os.environ["MONGODB_URL"]
 DATABASE_NAME = os.environ["MONGODB_DATABASE_NAME"]
-#REDIS_URL = os.getenv("REDIS_URL", None)
-REDIS_URL = "redis://sharding-repl-cache-redis:6379"
+REDIS_URL = os.getenv("REDIS_URL", None)
 
 
 def nocache(*args, **kwargs):
@@ -41,8 +40,10 @@ def nocache(*args, **kwargs):
 
 
 if REDIS_URL:
+    logger.info("[INIT] Используется декоратор cache из fastapi_cache")
     cache = cache
 else:
+    logger.warning("[INIT] REDIS_URL не установлен, используется nocache")
     cache = nocache
 
 
@@ -56,9 +57,22 @@ PyObjectId = Annotated[str, BeforeValidator(str)]
 
 @app.on_event("startup")
 async def startup():
+    logger.info(f"[STARTUP] REDIS_URL: {REDIS_URL}")
     if REDIS_URL:
-        redis = aioredis.from_url(REDIS_URL, encoding="utf8", decode_responses=True)
-        FastAPICache.init(RedisBackend(redis), prefix="api:cache")
+        try:
+            logger.info("[STARTUP] Подключение к Redis...")
+            redis = aioredis.from_url(REDIS_URL, encoding="utf8", decode_responses=True)
+            # Проверяем подключение
+            await redis.ping()
+            logger.info("[STARTUP] ✅ Redis подключен успешно")
+            FastAPICache.init(RedisBackend(redis), prefix="api:cache")
+            logger.info("[STARTUP] ✅ FastAPICache инициализирован")
+            cache_status = FastAPICache.get_enable()
+            logger.info(f"[STARTUP] Cache enabled: {cache_status}")
+        except Exception as e:
+            logger.error(f"[STARTUP] ❌ Ошибка подключения к Redis: {e}", exc_info=True)
+    else:
+        logger.warning("[STARTUP] REDIS_URL не установлен, кэш отключен")
 
 
 class UserModel(BaseModel):
@@ -80,7 +94,10 @@ class UserCollection(BaseModel):
 
 
 @app.get("/")
+@cache(expire=60)
 async def root():
+    logger.info("[ROOT] 🔄 Функция root() ВЫЗВАНА - выполняется запрос к БД")
+    start_time = time.time()
     collection_names = await db.list_collection_names()
     collections = {}
     for collection_name in collection_names:
@@ -110,6 +127,9 @@ async def root():
     if REDIS_URL:
         cache_enabled = FastAPICache.get_enable()
 
+    elapsed = time.time() - start_time
+    logger.info(f"[ROOT] ✅ Функция root() завершена за {elapsed:.3f}s")
+    
     return {
         "mongo_topology_type": topology_type,
         "mongo_replicaset_name": replicaset_name,
@@ -128,9 +148,14 @@ async def root():
 
 
 @app.get("/{collection_name}/count")
+@cache(expire=60)
 async def collection_count(collection_name: str):
+    logger.info(f"[COUNT] 🔄 Функция collection_count('{collection_name}') ВЫЗВАНА - выполняется запрос к БД")
+    start_time = time.time()
     collection = db.get_collection(collection_name)
     items_count = await collection.count_documents({})
+    elapsed = time.time() - start_time
+    logger.info(f"[COUNT] ✅ Функция collection_count('{collection_name}') завершена за {elapsed:.3f}s, count={items_count}")
     # status = await client.admin.command('replSetGetStatus')
     # import ipdb; ipdb.set_trace()
     return {"status": "OK", "mongo_db": DATABASE_NAME, "items_count": items_count}
@@ -142,15 +167,20 @@ async def collection_count(collection_name: str):
     response_model=UserCollection,
     response_model_by_alias=False,
 )
-@cache(expire=60 * 1)
+@cache(expire=60)
 async def list_users(collection_name: str):
     """
     List all of the user data in the database.
     The response is unpaginated and limited to 1000 results.
     """
+    logger.info(f"[LIST_USERS] 🔄 Функция list_users('{collection_name}') ВЫЗВАНА - выполняется запрос к БД")
+    start_time = time.time()
     time.sleep(1)
     collection = db.get_collection(collection_name)
-    return UserCollection(users=await collection.find().to_list(1000))
+    users = await collection.find().to_list(1000)
+    elapsed = time.time() - start_time
+    logger.info(f"[LIST_USERS] ✅ Функция list_users('{collection_name}') завершена за {elapsed:.3f}s, users_count={len(users)}")
+    return UserCollection(users=users)
 
 
 @app.get(
